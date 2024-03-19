@@ -1,0 +1,9 @@
+version: '3'
+services:
+  php_app:
+    build: .
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      - DOMAIN_NAME
