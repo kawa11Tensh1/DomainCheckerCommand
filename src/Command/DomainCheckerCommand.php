@@ -16,7 +16,6 @@ require 'vendor/autoload.php';
     name: 'domain:check',
     description: 'Check domain information',
 )]
-
 class DomainCheckerCommand extends Command
 {
     protected static $defaultName = 'domain:check';
@@ -32,29 +31,36 @@ class DomainCheckerCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         // Получение адреса домена из входных данных
-        $domain = $input->getArgument('domain'); // $domain = 'vl.ru';
+        $domain = $input->getArgument('domain');
 
         // Проверка существования домена и получение IP-адреса (DNS-запись типа "A")
-        $ipAddress = gethostbyname($domain);
+        $ipAddresses = dns_get_record($domain, DNS_A);
 
-        if ($ipAddress == $domain) 
+        if (empty($ipAddresses)) 
         {
             $output->writeln("Домена $domain не существует.");
         } 
         else 
         {
-            $output->writeln("IP-адрес домена $domain: $ipAddress");
+            foreach ($ipAddresses as $ipRecord) {
+                $ipAddress = $ipRecord['ip'];
+                $output->writeln("IP-адрес домена $domain: $ipAddress");
+            }
 
             // Получение MX-записей
             $mxRecords = dns_get_record($domain, DNS_MX);
             foreach ($mxRecords as $mxRecord) 
             {
                 $mailServer = $mxRecord['target'];
-                // Получение IP-адреса почтового сервера
-                $mailServerIp = gethostbyname($mailServer);
-                // Запрос PTR-записи для IP-адреса почтового сервера
-                $ptrRecord = gethostbyaddr($mailServerIp);
-                $output->writeln("Почтовый сервер: $mailServer, IP-адрес: $mailServerIp, PTR-запись: $ptrRecord");
+                
+                // Получение всех IP-адресов почтового сервера
+                $mailServerIps = dns_get_record($mailServer, DNS_A);
+                foreach ($mailServerIps as $mailServerIpRecord) {
+                    $mailServerIp = $mailServerIpRecord['ip'];
+                    // Запрос PTR-записи для IP-адреса почтового сервера
+                    $ptrRecord = gethostbyaddr($mailServerIp);
+                    $output->writeln("Почтовый сервер: $mailServer, IP-адрес: $mailServerIp, PTR-запись: $ptrRecord");
+                }
             }
         }
 
